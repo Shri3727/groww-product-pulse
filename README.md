@@ -12,11 +12,13 @@ py -3 scripts/serve_pulse.py
 
 Open http://127.0.0.1:8000/pulse
 
+On Vercel, import **this** repository (`groww-product-pulse`). The root redirects to `/pulse`. https://groww-nqm9.vercel.app is the Milestone 1 FAQ app and does not serve this page.
+
 The page clusters `data/reviews/groww_reviews.csv` (30 Aug 2026–22 Nov 2026, 3,244 reviews) into at most five themes, shows the top three, three real quotes, the weekly pulse, and the fee explainer.
 
 ## Where MCP approval happens
 
-On http://127.0.0.1:8000/pulse, in the **Approval** section.
+On `/pulse`, in the **Approval** section.
 
 The **Approve and log** button stays disabled until you check **I approve appending this entry to the notes doc and creating an email draft.** Nothing is written and nothing is sent before that.
 
@@ -27,7 +29,7 @@ After approval the app:
 
 Subject: `Weekly Product Pulse + Customer Clarification — Equity brokerage and sell-side charges`
 
-The draft is not sent.
+The draft is not sent. On Vercel the new entry is stored for that request under `/tmp`, because the hosted filesystem is read-only. The committed notes file and email draft in this repo are the submission copies.
 
 ## Fee issue identified from reviews
 

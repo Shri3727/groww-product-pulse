@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-NOTES_PATH = _ROOT / "deliverables" / "pulse" / "notes.md"
-EMAIL_PATH = _ROOT / "deliverables" / "pulse" / "email_draft.txt"
-PULSE_PATH = _ROOT / "deliverables" / "pulse" / "weekly_product_pulse.md"
-SOURCES_PATH = _ROOT / "deliverables" / "pulse" / "sources.md"
+
+
+def _output_dir() -> Path:
+    """Vercel can read the project files and can write only under /tmp."""
+    if os.getenv("VERCEL"):
+        path = Path("/tmp/pulse")
+    else:
+        path = _ROOT / "deliverables" / "pulse"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def email_draft(package: dict) -> str:
@@ -44,25 +51,32 @@ def notes_entry(package: dict) -> str:
 
 
 def write_pulse_preview(package: dict) -> Path:
-    PULSE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PULSE_PATH.write_text(package["weekly_pulse"], encoding="utf-8")
+    if os.getenv("VERCEL"):
+        return _ROOT / "deliverables" / "pulse" / "weekly_product_pulse.md"
+    folder = _output_dir()
+    pulse_path = folder / "weekly_product_pulse.md"
+    sources_path = folder / "sources.md"
+    pulse_path.write_text(package["weekly_pulse"], encoding="utf-8")
     lines = ["# Sources", ""]
     for url in package["source_list"]:
         lines.append(f"- {url}")
     lines.append("")
     lines.append(f"Last checked: {package['last_checked']}")
     lines.append("")
-    SOURCES_PATH.write_text("\n".join(lines), encoding="utf-8")
-    return PULSE_PATH
+    sources_path.write_text("\n".join(lines), encoding="utf-8")
+    return pulse_path
 
 
 def commit_approved(package: dict) -> dict[str, str]:
     """Append the notes entry and write the email draft. Call only after approval."""
-    NOTES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if not NOTES_PATH.exists():
-        NOTES_PATH.write_text("# Product pulse notes\n", encoding="utf-8")
-    with NOTES_PATH.open("a", encoding="utf-8") as handle:
-        handle.write(notes_entry(package))
-    EMAIL_PATH.write_text(email_draft(package), encoding="utf-8")
-    write_pulse_preview(package)
-    return {"notes": str(NOTES_PATH), "email_draft": str(EMAIL_PATH)}
+    folder = _output_dir()
+    notes_path = folder / "notes.md"
+    email_path = folder / "email_draft.txt"
+    if notes_path.exists():
+        existing = notes_path.read_text(encoding="utf-8")
+    else:
+        bundled = _ROOT / "deliverables" / "pulse" / "notes.md"
+        existing = bundled.read_text(encoding="utf-8") if bundled.exists() else "# Product pulse notes\n"
+    notes_path.write_text(existing.rstrip() + notes_entry(package), encoding="utf-8")
+    email_path.write_text(email_draft(package), encoding="utf-8")
+    return {"notes": str(notes_path), "email_draft": str(email_path)}
