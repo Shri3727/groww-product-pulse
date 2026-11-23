@@ -33,6 +33,7 @@ def _stub_fastapi() -> None:
     fastapi.HTTPException = HTTPException
     responses = types.ModuleType("fastapi.responses")
     responses.HTMLResponse = str
+    responses.FileResponse = object
     pydantic = types.ModuleType("pydantic")
 
     class BaseModel:
@@ -46,7 +47,8 @@ def _stub_fastapi() -> None:
 
 
 _stub_fastapi()
-from src.app.pulse_routes import _render, current_package  # noqa: E402
+from src.app.pulse_routes import _page, current_package  # noqa: E402
+from src.pulse.analyze import REVIEWS_CSV  # noqa: E402
 from src.pulse.store import commit_approved  # noqa: E402
 
 
@@ -61,8 +63,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
         if path in ("/", "/pulse"):
-            page = _render(current_package()).encode("utf-8")
-            self._send(200, page, "text/html; charset=utf-8")
+            self._send(200, _page().encode("utf-8"), "text/html; charset=utf-8")
+            return
+        if path == "/reviews.csv":
+            data = REVIEWS_CSV.read_bytes()
+            self._send(200, data, "text/csv; charset=utf-8")
             return
         if path == "/api/pulse":
             body = json.dumps(current_package(), ensure_ascii=False).encode("utf-8")
